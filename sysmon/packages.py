@@ -24,45 +24,50 @@ def normalize_version(parsed_version):
     return normalized
 
 
-def get_latest(name, version):
-    current_version = normalize_version(parse_version(version))
-    req = Requirement.parse(name)
-    pi.find_packages(req)
+def find_latest(current_version, versions):
+    current_version_norm = normalize_version(parse_version(current_version))
+    newest = current_version_norm, current_version
+    newest_major = current_version_norm, current_version
+    newest_minor = current_version_norm, current_version
 
-    newest = current_version, version
-    newest_major = current_version, version
-    newest_minor = current_version, version
-
-    for dist in pi[req.key]:
-        dist_version = normalize_version(dist.parsed_version)
+    for version in versions:
+        dist_version = normalize_version(parse_version(version))
 
         if dist_version[0] == newest_minor[0][0]:
             if dist_version[1] == newest_minor[0][1]:
                 if dist_version[2] > newest_minor[0][2]:
-                    newest_minor = dist_version, dist.version
+                    newest_minor = dist_version, version
 
         if dist_version[0] == newest_major[0][0]:
             if dist_version[1] == newest_major[0][1]:
                 if dist_version[2] > newest_major[0][2]:
-                    newest_major = dist_version, dist.version
+                    newest_major = dist_version, version
             if dist_version[1] > newest_major[0][1]:
-                newest_major = dist_version, dist.version
+                newest_major = dist_version, version
 
         if dist_version[0] == newest[0][0]:
             if dist_version[1] == newest[0][1]:
                 if dist_version[2] > newest[0][2]:
-                    newest = dist_version, dist.version
+                    newest = dist_version, version
             if dist_version[1] > newest[0][1]:
-                newest = dist_version, dist.version
+                newest = dist_version, version
         if dist_version[0] > newest[0][0]:
-            newest = dist_version, dist.version
+            newest = dist_version, version
 
-    return version, newest[1], newest_major[1], newest_minor[1]
+    return current_version, newest[1], newest_major[1], newest_minor[1]
 
 
-def check_version(name, version):
-    current, newest, newest_major, newest_minor = get_latest(name, version)
-    print "Current version of {name}: {v}".format(name=name, v=version)
+def get_latest(name, current_version):
+    req = Requirement.parse(name)
+    pi.find_packages(req)
+    versions = [x.version for x in pi[req.key]]
+
+    return find_latest(current_version, versions)
+
+
+def check_version(name, current_version):
+    current, newest, newest_major, newest_minor = get_latest(name, current_version)
+    print "Current version of {name}: {v}".format(name=name, v=current_version)
     if current != newest_minor:
         print "Newer minor version of {name}: {v}".format(name=name, v=newest_minor)
 
@@ -72,5 +77,6 @@ def check_version(name, version):
     if current != newest:
         print "Newest version of {name}: {v}".format(name=name, v=newest)
 
-for name, version in get_installed():
-    check_version(name, version)
+if __name__ == "__main__":
+    for name, current_version in get_installed():
+        check_version(name, current_version)
